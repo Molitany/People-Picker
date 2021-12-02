@@ -50,7 +50,7 @@ def getTeamMembers():
             'Accept': 'application/vnd.github.v3+json'
         }).json()
 
-        if (_team.get('parent') != 'null'):
+        if (_team.get('parent') != None and _team.get('parent').get('name') == '2021E'):
             members = requests.get(f"https://api.github.com/orgs/{org}/teams/{slug}/members", headers={
                 'Authorization': f'Bearer {token}',
                 'Accept': 'application/vnd.github.v3+json'
