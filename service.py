@@ -11,6 +11,7 @@ import requests
 import json
 import shutil
 
+userList = []
 
 def SaveUsersToFile(userList):
     members = getTeamMembers()
@@ -64,24 +65,24 @@ def getTeamMembers():
 
 
 def PRAssignedToUsers(userList, PROwnerName):
-    if(len(userList) > 1):
-        user0 = GetDeveloper(userList, PROwnerName)
-        user1 = GetDeveloper(userList, PROwnerName)
-    elif(len(userList) == 1):
-        if (list(userList.values())[0] == PROwnerName):
+    nonTeamList = dict(filter(lambda x: x[1] != userList.get(PROwnerName), userList.items()))
+    if(len(nonTeamList) > 1):
+        user0 = GetDeveloper(nonTeamList)
+        user1 = GetDeveloper(nonTeamList)
+    elif(len(nonTeamList) == 1):
+            user0 = GetDeveloper(nonTeamList)
             userList = SaveUsersToFile(userList)
-            user0 = GetDeveloper(userList, PROwnerName)
-            user1 = GetDeveloper(userList, PROwnerName)
-        else:
-            user0, user0ID = GetDeveloper(userList, PROwnerName)
-            userList = SaveUsersToFile(userList)
-            userList.pop(user0ID)
-            user1 = GetDeveloper(userList, PROwnerName)
+            userList.pop(user0)
+            nonTeamList = dict(filter(lambda x: x[1] != userList.get(PROwnerName), userList.items()))
+            user1 = GetDeveloper(nonTeamList)
     else:
         userList = SaveUsersToFile(userList)
-        user0 = GetDeveloper(userList, PROwnerName)
-        user1 = GetDeveloper(userList, PROwnerName)
+        user0 = GetDeveloper(nonTeamList, PROwnerName)
+        user1 = GetDeveloper(nonTeamList, PROwnerName)
 
+    nonTeamList.update(dict(filter(lambda x: x[1] == userList.get(PROwnerName), userList.items())))
+    userList = nonTeamList
+    
     with open('dev_stack.json', 'w') as file:
         file.write(json.dumps(userList))
 
@@ -128,7 +129,9 @@ def AuthorizeGithubInstallation():
         os.environ['INSTALL_TOKEN'] = response.get('token')
 
 
-def AssignReviewers(pullRequest, userList):
+def AssignReviewers(pullRequest):
+    global userList
+    userList = GetUsersFromFile(userList)
     PRUrl = pullRequest.get('url')
     assignees = PRAssignedToUsers(
         userList, pullRequest.get('user').get('login'))
@@ -147,10 +150,7 @@ def PostReviewers(PRUrl, assignees):
     }, json=json)
 
 
-def GetDeveloper(userList, name):
-    DevName, DevTeam = random.choice(list(userList.items()))
-    if (DevName == name or DevTeam == userList.get(name)):
-        return GetDeveloper(userList, DevName)
-    else:
-        userList.pop(DevName)
-        return DevName
+def GetDeveloper(userList):
+    DevName = random.choice(list(userList.keys()))
+    userList.pop(DevName)
+    return DevName
